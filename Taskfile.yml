@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+
+tasks:
+  default:
+    desc: Print all tasks
+    cmd: task --list-all
+    silent: true
+  dev-release:
+    desc: Package application for all platforms (development)
+    cmd: goreleaser release --snapshot --clean
+    silent: true
+  release:
+    desc: Build package and release application
+    cmd: goreleaser release --clean
+    silent: true
+  build:
+    cmds:
+      - go build -ldflags="-s -w -X main.version=dev" -trimpath

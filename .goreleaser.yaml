@@ -1,0 +1,61 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: flint
+    main: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ if .IsSnapshot }}{{ .Version }}-dev{{ else }}{{ .Version }}{{ end }}
+    goarch:
+      - amd64
+      - arm64
+      - "386"
+
+archives:
+  - formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+nfpms:
+  - id: flint-packages
+    package_name: flint
+    builds:
+      - flint
+    vendor: Sunaipa
+    homepage: https://github.com/sunaipa5/flint
+    maintainer: Sunaipa <https://github.com/sunaipa5>
+    description: Keyboard-driven CLI tool for project and workspace management.
+    license: GPL-3.0-only
+    formats:
+      - deb
+      - rpm
+      - apk
+    bindir: /usr/bin
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

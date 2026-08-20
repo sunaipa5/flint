@@ -1,0 +1,7 @@
+vars:
+  PACKAGE: main
+
+cmds:
+  - go mod init %n
+  - go mod tidy
+  - zed .

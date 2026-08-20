@@ -1,0 +1,5 @@
+vars:
+    author: Your Name
+cmds:
+    - git init
+    - echo 'Project %n (%p) created by {{.AUTHOR}} on %d (%y)'
