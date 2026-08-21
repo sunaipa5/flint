@@ -36,7 +36,7 @@ Download from the [Releases](https://github.com/sunaipa5/flint/releases) page:
 ### Via Go Install
 
 ```bash
-go install https://github.com/sunaipa5/flint@latest
+go install github.com/sunaipa5/flint@latest
 ```
 
 Ensure `$GOPATH/bin` or `$(go env GOPATH)/bin` is added to your shell's `PATH`.
