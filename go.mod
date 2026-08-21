@@ -1,4 +1,4 @@
-module flint
+module github.com/sunaipa5/flint
 
 go 1.26.6
 
