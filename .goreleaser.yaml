@@ -17,7 +17,7 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X main.version={{ if .IsSnapshot }}{{ .Version }}-dev{{ else }}{{ .Version }}{{ end }}
+      - "-X main.version={{ if .IsSnapshot }}{{ .Version }}-dev{{ else }}{{ .Version }}{{ end }}"
     goarch:
       - amd64
       - arm64
