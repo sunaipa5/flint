@@ -3,9 +3,20 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 )
 
-var version string
+var version = ""
+
+func getVersion() string {
+	if version != "" {
+		return version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return "dev"
+}
 
 func main() {
 	app, err := newApp()
@@ -24,7 +35,7 @@ func main() {
 	case "help", "-h", "-help", "--help":
 		app.cmdHelp()
 	case "version", "-v", "--version":
-		fmt.Println(version)
+		fmt.Println(getVersion())
 	case "list":
 		app.cmdList()
 	case "select":
