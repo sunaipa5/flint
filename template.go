@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,9 +10,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"slices"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -22,11 +24,14 @@ import (
 )
 
 type TemplateConfig struct {
-	Vars map[string]string `yaml:"vars"`
-	Cmds []string          `yaml:"cmds"`
+	Vars   map[string]string `yaml:"vars"`
+	Cmds   []string          `yaml:"cmds"`
+	Ignore []string          `yaml:"ignore"`
 }
 
 type TemplateVars map[string]string
+
+var goTplVarRegex = regexp.MustCompile(`\{\{\s*\.([a-zA-Z0-9_]+)\s*\}\}`)
 
 type tplStyles struct {
 	title        lipgloss.Style
@@ -272,6 +277,9 @@ func (a *App) cmdTemplateInit(args []string) {
 		Vars: map[string]string{
 			"author": "Your Name",
 		},
+		Ignore: []string{
+			"*.jar",
+		},
 		Cmds: []string{
 			"git init",
 			"echo 'Project %n (%p) created by {{.AUTHOR}} on %d (%y)'",
@@ -370,7 +378,7 @@ func (a *App) cmdTemplateNew(args []string) {
 		}
 	}
 
-	if err := copyTemplate(templateDir, targetPath, vars, []string{"template.yml"}); err != nil {
+	if err := copyTemplate(templateDir, targetPath, vars, []string{"template.yml"}, templateConfig.Ignore); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to copy template: %v\n", err)
 		return
 	}
@@ -422,7 +430,40 @@ func applyVarOverrides(vars TemplateVars, shortOverride, longOverride string) er
 	return nil
 }
 
-func copyTemplate(src, dst string, vars TemplateVars, exclude []string) error {
+func shouldIgnoreSubst(relPath string, patterns []string) bool {
+	slashPath := filepath.ToSlash(relPath)
+	baseName := filepath.Base(relPath)
+
+	for _, pattern := range patterns {
+		p := filepath.ToSlash(strings.TrimSpace(pattern))
+		if p == "" {
+			continue
+		}
+
+		if before, ok := strings.CutSuffix(p, "/"); ok {
+			dirPrefix := before
+			if slashPath == dirPrefix || strings.HasPrefix(slashPath, dirPrefix+"/") {
+				return true
+			}
+		}
+
+		if matched, _ := filepath.Match(p, baseName); matched {
+			return true
+		}
+
+		if matched, _ := filepath.Match(p, slashPath); matched {
+			return true
+		}
+	}
+	return false
+}
+
+func isBinaryData(data []byte) bool {
+	limit := min(len(data), 512)
+	return bytes.IndexByte(data[:limit], 0) != -1
+}
+
+func copyTemplate(src, dst string, vars TemplateVars, exclude, ignoreSubst []string) error {
 	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -437,10 +478,8 @@ func copyTemplate(src, dst string, vars TemplateVars, exclude []string) error {
 			return nil
 		}
 
-		for _, ex := range exclude {
-			if relPath == ex {
-				return nil
-			}
+		if slices.Contains(exclude, relPath) {
+			return nil
 		}
 
 		newRelPath := substituteVars(relPath, vars)
@@ -454,26 +493,41 @@ func copyTemplate(src, dst string, vars TemplateVars, exclude []string) error {
 			return err
 		}
 
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		perm := info.Mode().Perm()
+		if perm == 0 {
+			perm = 0644
+		}
+
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
 
+		if shouldIgnoreSubst(relPath, ignoreSubst) || isBinaryData(content) {
+			return os.WriteFile(targetPath, content, perm)
+		}
+
 		newContent := substituteVars(string(content), vars)
-		return os.WriteFile(targetPath, []byte(newContent), 0644)
+		return os.WriteFile(targetPath, []byte(newContent), perm)
 	})
 }
 
 func substituteVars(input string, vars TemplateVars) string {
-	result := input
-
-	tmpl, err := template.New("subst").Option("missingkey=zero").Parse(input)
-	if err == nil {
-		var buf strings.Builder
-		if err := tmpl.Execute(&buf, vars); err == nil {
-			result = buf.String()
+	result := goTplVarRegex.ReplaceAllStringFunc(input, func(match string) string {
+		sub := goTplVarRegex.FindStringSubmatch(match)
+		if len(sub) < 2 {
+			return match
 		}
-	}
+		key := strings.ToUpper(sub[1])
+		if val, ok := vars[key]; ok {
+			return val
+		}
+		return match
+	})
 
 	for k, v := range vars {
 		placeholder := "%" + strings.ToLower(k)

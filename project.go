@@ -321,7 +321,7 @@ func (a *App) editField(label, currentValue string) (string, bool) {
 }
 
 func (a *App) getInputWithRetry(label, errorMsg string, maxRetries int) string {
-	for i := 0; i < maxRetries; i++ {
+	for range maxRetries {
 		value, canceled := a.editField(label, "")
 		if canceled {
 			return ""

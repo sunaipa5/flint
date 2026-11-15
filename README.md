@@ -202,10 +202,14 @@ vars:
 cmds:
   - echo "Initializing %n (%p)..."
   - echo "Created by {{.AUTHOR}} under {{.license}} in %y"
+ignore:
+  - "*.jar"
+  - "gradle/wrapper/"
 ```
 
 - **vars**: Map of default variable values. Overridable via `-v KEY=VALUE`.
 - **cmds**: Shell commands executed sequentially inside the new project directory. Placeholders are expanded before execution.
+- ignore: List of file or directory patterns (supports globs like *.jar and directory prefixes like gradle/wrapper/) copied directly as raw bytes without variable substitution. Binary files are also skipped automatically.
 
 ### Example Template Structure
 

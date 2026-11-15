@@ -250,4 +250,8 @@ func (a *App) runWorkspace(wsName string) {
 
 		executeBackgroundCmd(line)
 	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading workspace file '%s': %v\n", wsName, err)
+	}
 }

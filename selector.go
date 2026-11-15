@@ -309,7 +309,7 @@ func (m selectorModel) renderPanel(title string, items []string, panel selection
 			line = mutedStyle.Render(line)
 		}
 
-		for _, l := range strings.Split(line, "\n") {
+		for l := range strings.SplitSeq(line, "\n") {
 			lines = append(lines, l)
 		}
 	}
@@ -325,7 +325,7 @@ func (m selectorModel) renderPanel(title string, items []string, panel selection
 
 	if totalPages > 1 {
 		var dots []string
-		for i := 0; i < totalPages; i++ {
+		for i := range totalPages {
 			if i == currentPage {
 				dots = append(dots, activeDotStyle.Render("●"))
 			} else {
